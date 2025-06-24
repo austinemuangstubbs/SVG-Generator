@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVG Component Prompt Tester</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            padding: 30px;
+        }
+        
+        h1 {
+            color: #1e293b;
+            margin-bottom: 8px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            color: #64748b;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .section {
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        
+        .section h2 {
+            color: #374151;
+            margin-bottom: 15px;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            color: #374151;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.2s;
+        }
+        
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+        
+        textarea {
+            width: 100%;
+            height: 200px;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 14px;
+            resize: vertical;
+            line-height: 1.5;
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+        
+        .generate-btn {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+        }
+        
+        .generate-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+        }
+        
+        .generate-btn:active {
+            transform: translateY(0);
+        }
+        
+        .results {
+            margin-top: 30px;
+        }
+        
+        .results-grid {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 30px;
+            margin-top: 20px;
+        }
+        
+        .svg-output {
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 20px;
+            border: 2px solid #e2e8f0;
+        }
+        
+        .svg-preview {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            border: 2px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            align-items: center;
+            justify-content: center;
+            min-height: 200px;
+        }
+        
+        .svg-container {
+            border: 1px dashed #cbd5e1;
+            border-radius: 8px;
+            padding: 20px;
+            background: #fafafa;
+            margin-bottom: 15px;
+        }
+        
+        .quick-test {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 15px;
+        }
+        
+        .quick-btn {
+            background: #e2e8f0;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .quick-btn:hover {
+            background: #cbd5e1;
+        }
+        
+        .copy-btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        
+        .copy-btn:hover {
+            background: #059669;
+        }
+        
+        .error {
+            background: #fee2e2;
+            color: #dc2626;
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 10px;
+            border: 1px solid #fecaca;
+        }
+        
+        .prompts-display {
+            background: #f1f5f9;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .prompt-section {
+            margin-bottom: 20px;
+        }
+        
+        .prompt-section:last-child {
+            margin-bottom: 0;
+        }
+        
+        .prompt-title {
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .prompt-content {
+            background: white;
+            padding: 12px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 13px;
+            line-height: 1.4;
+            color: #1f2937;
+            border: 1px solid #d1d5db;
+            white-space: pre-wrap;
+        }
+        
+        /* Loading overlay & spinner */
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 8px;
+            z-index: 10;
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #cbd5e1;
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 SVG Component Prompt Tester</h1>
+        <p class="subtitle">Test and optimize your LLM prompts for generating system design components</p>
+        
+        <div class="grid">
+            <div class="section">
+                <h2>⚙️ Configuration</h2>
+                <div class="input-group">
+                    <label for="componentName">Component Name:</label>
+                    <input type="text" id="componentName" placeholder="e.g., Database, API Gateway, Message Queue" value="Database">
+                    <div class="quick-test">
+                        <span style="font-size: 14px; color: #64748b;">Quick test:</span>
+                        <button class="quick-btn" onclick="setComponent('Database')">Database</button>
+                        <button class="quick-btn" onclick="setComponent('API Gateway')">API Gateway</button>
+                        <button class="quick-btn" onclick="setComponent('Message Queue')">Message Queue</button>
+                        <button class="quick-btn" onclick="setComponent('Cache')">Cache</button>
+                        <button class="quick-btn" onclick="setComponent('Firewall')">Firewall</button>
+                        <button class="quick-btn" onclick="setComponent('Microservice')">Microservice</button>
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label for="customPreferences">Custom Preferences (optional):</label>
+                    <textarea id="customPreferences" placeholder="e.g., Use a blue gradient fill and rounded corners"></textarea>
+                </div>
+                
+                <button class="generate-btn" onclick="generateSVG()">🚀 Generate SVG Component</button>
+            </div>
+            
+            <div class="section">
+                <h2>📋 Generated Prompts</h2>
+                <div class="prompts-display" id="promptsDisplay">
+                    <div class="prompt-section">
+                        <div class="prompt-title">System Prompt:</div>
+                        <div class="prompt-content" id="systemPromptDisplay">Enter a component name to see the prompts...</div>
+                    </div>
+                    <div class="prompt-section">
+                        <div class="prompt-title">User Prompt:</div>
+                        <div class="prompt-content" id="userPromptDisplay">Enter a component name to see the prompts...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="results" id="results" style="display: none;">
+            <h2>📊 Results</h2>
+            <div class="results-grid">
+                <div class="section">
+                    <h3>Generated SVG Code:</h3>
+                    <textarea id="svgOutput" placeholder="Generated SVG will appear here..."></textarea>
+                    <button class="copy-btn" onclick="copySVG()">📋 Copy SVG Code</button>
+                </div>
+                
+                <div class="section">
+                    <h3>Live Preview:</h3>
+                    <div class="svg-preview">
+                        <div class="svg-container" id="svgPreview">
+                            <!-- SVG will be rendered here -->
+                        </div>
+                        <div class="loading-overlay" id="loadingOverlay" style="display:none;">
+                            <div class="spinner"></div>
+                            <span style="margin-top:8px;color:#64748b;">Generating…</span>
+                        </div>
+                        <small style="color: #64748b;">Preview renders automatically</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const systemPrompt = `You are a specialized SVG generator for system design interview applications. Your task is to create clean, minimalist SVG components that represent various system architecture elements.
+
+**Requirements:**
+- Generate only SVG code without any explanations or markdown formatting
+- Create components that are 80-100px in width and height for optimal drag-and-drop usage
+- Use minimal, professional styling with clean lines and appropriate colors
+- Include clear visual metaphors that make each component instantly recognizable
+- Add a text label at the bottom of each component
+- Use consistent color schemes: blues for networking components, greens for servers/compute, purples for CDN/caching, oranges for databases, etc.
+- Ensure components have proper stroke widths (1-2px) and rounded corners where appropriate
+- Include relevant visual details (arrows for data flow, dots for status indicators, lines for structure)
+
+**Style Guidelines:**
+- Use viewBox for scalability
+- Apply subtle fill colors with darker stroke colors
+- Keep text readable at small sizes (10-12px font)
+- Use standard font families (Arial, sans-serif)
+- Maintain visual hierarchy with appropriate element sizing
+- Use common illustration patterns used in the industry to illustrate the system design components.
+- Make sure the illustration still visually represents the component.
+- Make sure the text is not overlapping with the component.
+
+
+**Format:**
+- Only return the SVG code, in a JSON format with the key "svg" and the value being the SVG code.
+`;
+
+        function setComponent(name) {
+            document.getElementById('componentName').value = name;
+            updatePrompts();
+        }
+        
+        function updatePrompts() {
+            const componentName = document.getElementById('componentName').value || '[COMPONENT_NAME]';
+            const prefs = document.getElementById('customPreferences').value.trim();
+            const userPrompt = `Generate an SVG component for: **${componentName}**${prefs ? '\n\nConsider the following when generating the SVG: ' + prefs : ''}`;
+            
+            document.getElementById('systemPromptDisplay').textContent = systemPrompt;
+            document.getElementById('userPromptDisplay').textContent = userPrompt;
+        }
+        
+        async function generateSVG() {
+            const componentName = document.getElementById('componentName').value.trim();
+            const prefs = document.getElementById('customPreferences').value.trim();
+
+            if (!componentName) {
+                alert('Please enter a component name');
+                return;
+            }
+
+            const userPrompt = `Generate an SVG component for: **${componentName}**${prefs ? '\n\nUser preferences: ' + prefs : ''}`;
+            // Update prompt display with prefs
+            document.getElementById('userPromptDisplay').textContent = userPrompt;
+            // Show loading state
+            const previewContainer = document.getElementById('svgPreview');
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            loadingOverlay.style.display = 'flex';
+            previewContainer.innerHTML = '<em style="color:#64748b">Generating…</em>';
+
+            try {
+                const response = await fetch('/api/generate-svg', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ systemPrompt, userPrompt })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Server responded with ${response.status}`);
+                }
+
+                const data = await response.json();
+                const svgCode = data.svg || '';
+
+                document.getElementById('svgOutput').value = svgCode;
+                previewContainer.innerHTML = svgCode;
+                loadingOverlay.style.display = 'none';
+                document.getElementById('results').style.display = 'block';
+
+                // Scroll to results
+                document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
+            } catch (error) {
+                previewContainer.innerHTML = `<div class="error">${error.message || 'Failed to generate SVG'}</div>`;
+                loadingOverlay.style.display = 'none';
+                console.error(error);
+            }
+        }
+        
+        function copySVG() {
+            const svgCode = document.getElementById('svgOutput').value;
+            navigator.clipboard.writeText(svgCode).then(() => {
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✅ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+        
+        // Initialize
+        document.getElementById('componentName').addEventListener('input', updatePrompts);
+        document.getElementById('customPreferences').addEventListener('input', updatePrompts);
+        updatePrompts();
+    </script>
+</body>
+</html>

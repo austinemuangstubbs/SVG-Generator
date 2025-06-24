@@ -1,0 +1,14 @@
+{
+  "name": "sidebar-frontend",
+  "version": "1.0.0",
+  "description": "Basic Express server that serves static HTML with many script tags.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "openai": "^4.24.0",
+    "dotenv": "^16.3.1"
+  }
+} 
