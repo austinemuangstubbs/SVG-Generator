@@ -270,6 +270,22 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+        
+        /* Image drop zone */
+        .drop-zone {
+            border: 2px dashed #cbd5e1;
+            padding: 20px;
+            border-radius: 6px;
+            text-align: center;
+            color: #64748b;
+            background: #f8fafc;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s;
+        }
+        .drop-zone.dragover {
+            background: #e0f2fe;
+            border-color: #3b82f6;
+        }
     </style>
 </head>
 <body>
@@ -297,6 +313,16 @@
                 <div class="input-group">
                     <label for="customPreferences">Custom Preferences (optional):</label>
                     <textarea id="customPreferences" placeholder="e.g., Use a blue gradient fill and rounded corners"></textarea>
+                </div>
+                
+                <!-- Screenshot drop/paste area -->
+                <div class="input-group">
+                    <label>Screenshot (drag & drop, click, or paste):</label>
+                    <div id="dropZone" class="drop-zone">
+                        <span id="dropZoneText">Drop image here, click to upload, or paste ⌘+V</span>
+                        <img id="imagePreview" style="max-width:100%;display:none;margin-top:10px;border-radius:4px;" />
+                        <button id="clearImageBtn" style="display:none;margin-top:10px;background:#ef4444;color:white;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;">Remove Image</button>
+                    </div>
                 </div>
                 
                 <button class="generate-btn" onclick="generateSVG()">🚀 Generate SVG Component</button>
@@ -337,6 +363,7 @@
                             <span style="margin-top:8px;color:#64748b;">Generating…</span>
                         </div>
                         <small style="color: #64748b;">Preview renders automatically</small>
+                        <div id="tokenUsage" style="margin-top:10px;color:#475569;font-size:14px;"></div>
                     </div>
                 </div>
             </div>
@@ -379,7 +406,8 @@
         function updatePrompts() {
             const componentName = document.getElementById('componentName').value || '[COMPONENT_NAME]';
             const prefs = document.getElementById('customPreferences').value.trim();
-            const userPrompt = `Generate an SVG component for: **${componentName}**${prefs ? '\n\nConsider the following when generating the SVG: ' + prefs : ''}`;
+            const screenshotDataUrl = document.getElementById('imagePreview').src;
+            const userPrompt = `Generate an SVG component for: **${componentName}**${prefs ? '\n\nConsider the following when generating the SVG: ' + prefs : ''}${screenshotDataUrl ? '\n\nUse the following screenshot as visual style for the shape of the SVG icon, while still adhering to the rest of the mentioned styling approaches.' : ''}`;
             
             document.getElementById('systemPromptDisplay').textContent = systemPrompt;
             document.getElementById('userPromptDisplay').textContent = userPrompt;
@@ -388,13 +416,14 @@
         async function generateSVG() {
             const componentName = document.getElementById('componentName').value.trim();
             const prefs = document.getElementById('customPreferences').value.trim();
+            const screenshotDataUrl = document.getElementById('imagePreview').src;
 
             if (!componentName) {
                 alert('Please enter a component name');
                 return;
             }
 
-            const userPrompt = `Generate an SVG component for: **${componentName}**${prefs ? '\n\nUser preferences: ' + prefs : ''}`;
+            const userPrompt = `Generate an SVG component for: **${componentName}**${prefs ? '\n\nUser preferences: ' + prefs : ''}${screenshotDataUrl ? '\n\nUse the following screenshot as visual style for the shape of the SVG icon, while still adhering to the rest of the mentioned styling approaches.' : ''}`;
             // Update prompt display with prefs
             document.getElementById('userPromptDisplay').textContent = userPrompt;
             // Show loading state
@@ -407,7 +436,7 @@
                 const response = await fetch('/api/generate-svg', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ systemPrompt, userPrompt })
+                    body: JSON.stringify({ systemPrompt, userPrompt, screenshot: screenshotDataUrl })
                 });
 
                 if (!response.ok) {
@@ -422,6 +451,20 @@
                 loadingOverlay.style.display = 'none';
                 document.getElementById('results').style.display = 'block';
 
+                // Token usage display
+                const usage = data.usage || {};
+                const usageElem = document.getElementById('tokenUsage');
+                if (usage.totalTokens !== undefined) {
+                    const prompt = usage.promptTokens ?? 0;
+                    const image = usage.imageTokens ?? 0;
+                    const completion = usage.completionTokens ?? 0;
+                    const total = usage.totalTokens ?? 0;
+                    const cost = usage.costUSD !== undefined ? `$${usage.costUSD.toFixed(4)}` : 'N/A';
+                    usageElem.innerHTML = `Tokens – Prompt: <strong>${prompt}</strong>, Image: <strong>${image}</strong>, Completion: <strong>${completion}</strong>, Total: <strong>${total}</strong><br/>Cost: <strong>${cost}</strong>`;
+                } else {
+                    usageElem.textContent = '';
+                }
+
                 // Scroll to results
                 document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
             } catch (error) {
@@ -430,7 +473,7 @@
                 console.error(error);
             }
         }
-        
+
         function copySVG() {
             const svgCode = document.getElementById('svgOutput').value;
             navigator.clipboard.writeText(svgCode).then(() => {
@@ -442,10 +485,79 @@
                 }, 2000);
             });
         }
-        
-        // Initialize
+
+        // Image drag-and-drop / paste handling helpers & listeners
+        let screenshotDataUrl = null;
+
+        function handleFiles(files) {
+            const file = files[0];
+            if (!file || !file.type.startsWith('image/')) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                screenshotDataUrl = e.target.result;
+                const img = document.getElementById('imagePreview');
+                img.src = screenshotDataUrl;
+                img.style.display = 'block';
+                document.getElementById('dropZoneText').style.display = 'none';
+                document.getElementById('clearImageBtn').style.display = 'inline-block';
+                updatePrompts();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        const dropZone = document.getElementById('dropZone');
+        dropZone.addEventListener('click', () => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = () => handleFiles(input.files);
+            input.click();
+        });
+        ['dragenter', 'dragover'].forEach(evt => {
+            dropZone.addEventListener(evt, e => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'copy';
+                dropZone.classList.add('dragover');
+            });
+        });
+        ['dragleave', 'drop'].forEach(evt => {
+            dropZone.addEventListener(evt, e => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+            });
+        });
+        dropZone.addEventListener('drop', e => {
+            handleFiles(e.dataTransfer.files);
+        });
+
+        // Paste event for screenshots
+        window.addEventListener('paste', e => {
+            const items = e.clipboardData?.items;
+            if (!items) return;
+            for (const item of items) {
+                if (item.type.startsWith('image/')) {
+                    const file = item.getAsFile();
+                    if (file) handleFiles([file]);
+                }
+            }
+        });
+
+        // Input listeners
         document.getElementById('componentName').addEventListener('input', updatePrompts);
         document.getElementById('customPreferences').addEventListener('input', updatePrompts);
+
+        // Clear image button handler
+        document.getElementById('clearImageBtn').addEventListener('click', () => {
+            screenshotDataUrl = null;
+            const img = document.getElementById('imagePreview');
+            img.src = '';
+            img.style.display = 'none';
+            document.getElementById('dropZoneText').style.display = '';
+            document.getElementById('clearImageBtn').style.display = 'none';
+            updatePrompts();
+        });
+
+        // Initial prompt render
         updatePrompts();
     </script>
 </body>

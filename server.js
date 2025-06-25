@@ -13,25 +13,54 @@ const openai = new OpenAI({
 });
 
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 // POST route to proxy SVG generation via OpenAI
 app.post('/api/generate-svg', async (req, res) => {
   try {
-    const { systemPrompt, userPrompt } = req.body || {};
+    const { systemPrompt, userPrompt, screenshot } = req.body || {};
 
     if (!systemPrompt || !userPrompt) {
       return res.status(400).json({ error: 'systemPrompt and userPrompt are required' });
     }
 
+    // Build user content allowing image input when provided
+    const userContent = [
+      { type: 'text', text: userPrompt }
+    ];
+    if (screenshot) {
+      userContent.push({
+        type: 'image_url',
+        image_url: {
+          url: screenshot // data URL (png/jpg) already base64-encoded
+        }
+      });
+    }
+
     const completion = await openai.chat.completions.create({
-      model: 'o3', // GPT-4.1 equivalent (update if official model string differs)
+      model: 'o3',
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt }
+        { role: 'user', content: userContent }
       ],
       temperature: 1
     });
+
+    // Extract usage for token/cost reporting
+    const usage = completion.usage || {};
+    const promptTokens = usage.prompt_tokens || 0;
+    const completionTokens = usage.completion_tokens || 0;
+    const imageTokens = usage.image_tokens || 0;
+    const totalTokens = usage.total_tokens || (promptTokens + completionTokens + imageTokens);
+
+    // Updated pricing for o3 (June 2025): $1 per 1M input tokens, $4 per 1M output tokens
+    // Divide by 1000 to convert to per-1K token price
+    const INPUT_COST_PER_1K = 0.001;  // USD per 1K input tokens (prompt + image)
+    const OUTPUT_COST_PER_1K = 0.004; // USD per 1K output tokens (completion)
+
+    const inputCost = ((promptTokens + imageTokens) / 1000) * INPUT_COST_PER_1K;
+    const outputCost = (completionTokens / 1000) * OUTPUT_COST_PER_1K;
+    const costUSD = Number((inputCost + outputCost).toFixed(6));
 
     const svgJSON = completion.choices?.[0]?.message?.content || '';
     console.log('svgJSON: ', svgJSON);
@@ -50,7 +79,16 @@ app.post('/api/generate-svg', async (req, res) => {
       return res.json({ svg: svgJSON });
     }
 
-    return res.json({ svg: parsed.svg || '' });
+    return res.json({
+      svg: parsed.svg || '',
+      usage: {
+        promptTokens,
+        imageTokens,
+        completionTokens,
+        totalTokens,
+        costUSD
+      }
+    });
   } catch (err) {
     console.error('OpenAI request failed:', err);
     return res.status(500).json({ error: 'Failed to generate SVG component' });
